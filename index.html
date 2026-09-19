@@ -39,29 +39,25 @@ h1.title{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400;
 /* затемнення — простий прозорий шар, без filter: майже безкоштовно */
 .dim{position:absolute;inset:0;background:#05050b;opacity:0;pointer-events:none;
   transition:opacity .3s ease;z-index:2}
-.has-open .dim{opacity:.55}
+.has-open .dim{opacity:.64}
 
 /* ЄДИНИЙ шар кімнати — полігон підставляється під ту, на яку навели */
-.room{position:absolute;inset:0;z-index:3;pointer-events:none;
+.room{position:absolute;z-index:3;pointer-events:none;
+  left:var(--x,0);top:var(--y,0);width:var(--w,0);height:var(--h,0);
   clip-path:polygon(var(--poly,0 0,0 0,0 0));
   background-image:url("assets/manor-1800.webp");
   background-image:image-set(url("assets/manor-1800.avif") type("image/avif"),
                              url("assets/manor-1800.webp") type("image/webp"));
-  background-size:100% 100%;
-  transform-origin:var(--cx,50%) var(--cy,50%);
-  transform:scale(1);opacity:0;
-  transition:transform .34s cubic-bezier(.22,.9,.28,1), opacity .2s ease;
+  background-size:var(--bgs,100% 100%);
+  background-position:var(--bgp,0 0);
+  transform-origin:50% 50%;transform:scale(1);opacity:0;
+  transition:transform .32s cubic-bezier(.22,.9,.28,1), opacity .18s ease;
   will-change:transform,opacity}
 .has-open .room{opacity:1;transform:scale(var(--grow));
-  filter:brightness(1.4) drop-shadow(0 0 1px #e6c07a) drop-shadow(0 14px 22px rgba(0,0,0,.9))}
-/* тепле світло в підсвіченій кімнаті */
-.glow{position:absolute;inset:0;z-index:4;pointer-events:none;
-  clip-path:polygon(var(--poly,0 0,0 0,0 0));
-  transform-origin:var(--cx,50%) var(--cy,50%);transform:scale(var(--grow));
-  background:radial-gradient(58% 68% at var(--cx,50%) var(--cy,50%),
-             rgba(255,190,115,.22), rgba(200,35,42,.08) 45%, transparent 62%);
-  opacity:0;transition:opacity .3s ease}
-.has-open .glow{opacity:1}
+}
+/* тепле світло — той самий маленький шар, без окремого елемента */
+.room::after{content:"";position:absolute;inset:0;
+  background:radial-gradient(58% 66% at 50% 46%, rgba(255,198,130,.17), rgba(205,60,50,.07) 48%, transparent 68%)}
 
 /* прозорі полігони ловлять курсор — растеризації нуль */
 .hit{position:absolute;inset:0;z-index:10;width:100%;height:100%}
@@ -126,7 +122,7 @@ h1.title{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400;
   pointer-events:none;transition:opacity .4s;text-align:center;max-width:90vw}
 
 /* «як зараз» — ефекти вимкнені */
-.flat .room,.flat .glow,.flat .dim{opacity:0!important}
+.flat .room,.flat .dim{opacity:0!important}
 .flat .manor{transform:none!important}
 .flat .pin{opacity:1!important}
 
@@ -147,7 +143,7 @@ h1.title{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400;
   .hud button{font-size:11px;padding:7px 10px}
   .hint{display:none}
 }
-@media (prefers-reduced-motion:reduce){.room,.manor,.glow{transition:none}}
+@media (prefers-reduced-motion:reduce){.room,.manor{transition:none}}
 html.shot .hud,html.shot .hint{display:none}
 </style>
 </head>
@@ -175,7 +171,6 @@ html.shot .hud,html.shot .hint{display:none}
       <div class="fog"></div>
       <div class="dim"></div>
       <div class="room" id="room"></div>
-      <div class="glow" id="glow"></div>
       <svg class="hit" id="hit" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
     </div>
   </div>
@@ -206,7 +201,7 @@ const ROOMS = [
 ];
 
 const stage=document.getElementById('stage'), manor=document.getElementById('manor'),
-      room=document.getElementById('room'), glow=document.getElementById('glow'),
+      room=document.getElementById('room'),
       hit=document.getElementById('hit'), tabs=document.getElementById('tabs'),
       mcard=document.getElementById('mcard'), hint=document.getElementById('hint'),
       sub=document.getElementById('sub');
@@ -219,9 +214,18 @@ const pic = (base) =>
 
 ROOMS.forEach(r=>{
   const box=P[r.k];
-  r.poly = box.map(p=>p[0]+'% '+p[1]+'%').join(',');
-  r.cx = (box.reduce((a,p)=>a+p[0],0)/box.length)+'%';
-  r.cy = (box.reduce((a,p)=>a+p[1],0)/box.length)+'%';
+  /* межі кімнати у % від картинки */
+  const x0=Math.min(...box.map(p=>p[0])), x1=Math.max(...box.map(p=>p[0]));
+  const y0=Math.min(...box.map(p=>p[1])), y1=Math.max(...box.map(p=>p[1]));
+  const w=x1-x0, h=y1-y0;
+  r.geo = {
+    x:x0+'%', y:y0+'%', w:w+'%', h:h+'%',
+    /* картинка більша за шар рівно в 100/w разів — показуємо потрібний фрагмент */
+    bgs:(100/w*100)+'% '+(100/h*100)+'%',
+    bgp:(x0/(100-w)*100)+'% '+(y0/(100-h)*100)+'%',
+    /* полігон перераховано в координати самого шару */
+    poly:box.map(p=>((p[0]-x0)/w*100)+'% '+((p[1]-y0)/h*100)+'%').join(',')
+  };
 
   const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
   poly.setAttribute('points', box.map(p=>p[0]+','+p[1]).join(' '));
@@ -248,24 +252,28 @@ ROOMS.forEach(r=>{
 });
 
 /* ───────── один шар — підставляємо потрібний полігон ───────── */
-let current=null, closeT=null, flat=false;
+let current=null, closeT=null, settleT=null, flat=false;
 function open_(r){
   if(flat || current===r) return;
   clearTimeout(closeT);
   current=r;
-  [room,glow].forEach(el=>{
-    el.style.setProperty('--poly', r.poly);
-    el.style.setProperty('--cx', r.cx);
-    el.style.setProperty('--cy', r.cy);
-  });
+  const g=r.geo, st=room.style;
+  room.classList.remove('settled');
+  st.setProperty('--x',g.x); st.setProperty('--y',g.y);
+  st.setProperty('--w',g.w); st.setProperty('--h',g.h);
+  st.setProperty('--poly',g.poly);
+  st.setProperty('--bgs',g.bgs); st.setProperty('--bgp',g.bgp);
   stage.classList.add('has-open');
   ROOMS.forEach(x=>{ x.pin.classList.toggle('on', x===r); x.tab.classList.toggle('on', x===r); });
   mcard.innerHTML = pic(r.img)+'<h3>'+r.title+'</h3><p>'+r.text+'</p><a href="'+r.href+'">visit '+r.title+'</a>';
   mcard.classList.add('on');
   hint.style.opacity=0;
+  clearTimeout(settleT);
+  settleT=setTimeout(()=>{ if(current===r) room.classList.add('settled'); }, 360);
 }
 function close_(r,now){
-  clearTimeout(closeT);
+  clearTimeout(closeT); clearTimeout(settleT);
+  room.classList.remove('settled');
   closeT=setTimeout(()=>{
     current=null;
     stage.classList.remove('has-open');
@@ -282,8 +290,8 @@ document.addEventListener('pointerdown',e=>{
   close_(current,true);
 });
 
-/* ───────── нахил: одна трансформація на весь блок ───────── */
-if(!MOB){
+/* нахил за мишею прибрано: він змушував перемальовувати всю картинку щокадру */
+if(false){
   let rx=0,ry=0,tx=0,ty=0,raf=null;
   stage.addEventListener('pointermove',e=>{
     if(flat||e.pointerType!=='mouse') return;
