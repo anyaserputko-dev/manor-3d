@@ -4,228 +4,150 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Explore the Manor — 3D prototype</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="image" href="assets/manor-1800.avif" type="image/avif" media="(min-width:990px)" fetchpriority="high">
 <link rel="preload" as="image" href="assets/manor-900.avif" type="image/avif" media="(max-width:989px)" fetchpriority="high">
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,600&display=swap"
-      onload="this.rel='stylesheet'">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,600&display=swap">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,600&display=swap"></noscript>
 <style>
 :root{
-  --bg:#07070c;
-  --ink:#efe7dd;
-  --muted:#9a9098;
-  --blood:#8e1116;
-  --blood-lt:#c8232a;
-  --gold:#c9a86a;
-  --persp:1700px;
-  --lift:0px;       /* підйом більше не потрібен — кімната росте на місці */
-  --pop:320px;      /* виїзд на глядача: кімната виходить на передній план */
-  --thick:1;
+  --bg:#07070c; --ink:#efe7dd; --muted:#9a9098;
+  --blood:#8e1116; --blood-lt:#c8232a; --gold:#c9a86a;
+  --grow:1.22;          /* наскільки кімната виходить на передній план */
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  -webkit-font-smoothing:antialiased}
 body{overflow-x:hidden}
 
 .wrap{max-width:1560px;margin:0 auto;padding:56px 16px 90px}
-.eyebrow{display:flex;align-items:center;justify-content:center;gap:14px;
-  font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#f2ece4;margin:0 0 16px}
+.eyebrow{display:flex;align-items:center;justify-content:center;gap:14px;font-size:12.5px;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;color:#f2ece4;margin:0 0 16px}
 .eyebrow svg{width:32px;height:11px;fill:var(--blood-lt);flex:none}
 h1.title{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400;
-  font-size:clamp(44px,8.6vw,132px);line-height:.94;letter-spacing:.035em;text-align:center;
+  font-size:clamp(40px,7.4vw,116px);line-height:.96;letter-spacing:.03em;text-align:center;
   margin:0 0 6px;text-transform:uppercase;text-shadow:0 0 44px rgba(190,40,40,.26)}
 .sub{text-align:center;color:var(--muted);font-size:13px;margin:0 0 26px}
 
-/* ───────── сцена ───────── */
-.stage{position:relative;perspective:var(--persp);perspective-origin:50% 42%;
-  padding:90px 0 60px;margin:-90px 0 -60px;overflow:clip}
-.scene{position:relative;transform-style:preserve-3d;
-  transition:transform 1s cubic-bezier(.16,.84,.24,1);will-change:transform}
-.manor{position:relative;transform-style:preserve-3d;
-  transition:transform .5s cubic-bezier(.2,.8,.2,1);will-change:transform}
-.manor__base{display:block;width:100%;height:auto;opacity:0;transition:opacity .45s ease}
-.scene.is-in .manor__base{opacity:1}
+/* ───────── сцена: лише 4 шари замість двох десятків ───────── */
+.stage{position:relative;perspective:1600px;perspective-origin:50% 42%;overflow:clip;
+  padding:40px 0 30px;margin:-40px 0 -30px}
+.manor{position:relative;transition:transform .45s cubic-bezier(.2,.8,.2,1);will-change:transform}
+.manor__base{display:block;width:100%;height:auto;opacity:0;transition:opacity .4s ease}
+.is-in .manor__base{opacity:1}
 
-.room{position:absolute;inset:0;transform-style:preserve-3d;pointer-events:none}
+/* затемнення — простий прозорий шар, без filter: майже безкоштовно */
+.dim{position:absolute;inset:0;background:#05050b;opacity:0;pointer-events:none;
+  transition:opacity .3s ease;z-index:2}
+.has-open .dim{opacity:.55}
 
-
-/* сам блок кімнати */
-.room__face{position:absolute;inset:0;
+/* ЄДИНИЙ шар кімнати — полігон підставляється під ту, на яку навели */
+.room{position:absolute;inset:0;z-index:3;pointer-events:none;
+  clip-path:polygon(var(--poly,0 0,0 0,0 0));
   background-image:url("assets/manor-1800.webp");
   background-image:image-set(url("assets/manor-1800.avif") type("image/avif"),
                              url("assets/manor-1800.webp") type("image/webp"));
   background-size:100% 100%;
-  clip-path:polygon(var(--poly));
-  transform:translateZ(calc(var(--z) + 260px)) translateY(-40px) scale(var(--s));
-  transform-origin:var(--cx) var(--cy);opacity:0;filter:none;
-  transition:transform .38s cubic-bezier(.22,.9,.28,1), filter .3s ease, opacity .5s ease;
-  pointer-events:auto}
-.room--clickable .room__face{cursor:url("assets/cursor-hand.png") 16 8, pointer}
+  transform-origin:var(--cx,50%) var(--cy,50%);
+  transform:scale(1);opacity:0;
+  transition:transform .34s cubic-bezier(.22,.9,.28,1), opacity .2s ease;
+  will-change:transform,opacity}
+.has-open .room{opacity:1;transform:scale(var(--grow));
+  filter:brightness(1.4) drop-shadow(0 0 1px #e6c07a) drop-shadow(0 14px 22px rgba(0,0,0,.9))}
+/* тепле світло в підсвіченій кімнаті */
+.glow{position:absolute;inset:0;z-index:4;pointer-events:none;
+  clip-path:polygon(var(--poly,0 0,0 0,0 0));
+  transform-origin:var(--cx,50%) var(--cy,50%);transform:scale(var(--grow));
+  background:radial-gradient(58% 68% at var(--cx,50%) var(--cy,50%),
+             rgba(255,190,115,.22), rgba(200,35,42,.08) 45%, transparent 62%);
+  opacity:0;transition:opacity .3s ease}
+.has-open .glow{opacity:1}
 
-/* поява при скролі */
-.scene.is-in .room__face{opacity:1;transform:translateZ(var(--z)) scale(var(--s));
-  transition:transform .55s cubic-bezier(.16,.86,.2,1) var(--delay), opacity .4s ease var(--delay), filter .3s ease}
-.scene.is-in.has-open .room__face{transition:transform .38s cubic-bezier(.22,.9,.28,1), filter .3s ease}
-
-/* ── режим A: діорама (блок піднімається вертикально) ── */
-.scene[data-mode="lift"].is-in .room.is-open .room__face{
-  transform:translateZ(calc(var(--z) + var(--pop))) translate(var(--openx), var(--openy)) scale(var(--s));
-  filter:brightness(1.45) saturate(1.12)
-         drop-shadow(0 0 1px #e6c07a) drop-shadow(0 0 3px rgba(230,192,122,.5))
-         drop-shadow(0 calc(2px * var(--thick)) 0 #6a6274)
-         drop-shadow(0 calc(4px * var(--thick)) 0 #322d3a)
-         drop-shadow(0 calc(8px * var(--thick)) 0 #1a1720)
-         drop-shadow(0 calc(14px * var(--thick)) 0 #0b0a10)
-         drop-shadow(0 22px 30px rgba(0,0,0,.92))}
-/* ── режим B: шухляда (виїжджає вперед по ізометричній осі) ── */
-.scene[data-mode="drawer"].is-in .room.is-open .room__face{
-  transform:translateZ(calc(var(--z) + 96px)) translate(-1.4%, 2.2%) scale(var(--s));
-  filter:brightness(1.3)
-         drop-shadow(0 calc(2px * var(--thick)) 0 #5d5566)
-         drop-shadow(0 calc(5px * var(--thick)) 0 #2b2733)
-         drop-shadow(0 calc(10px * var(--thick)) 0 #17141d)
-         drop-shadow(0 calc(18px * var(--thick)) 0 #0b0a10)
-         drop-shadow(-14px 30px 44px rgba(0,0,0,.95))}
-
-
-
-/* тепле світло з відкритої кімнати */
-.room__glow{position:absolute;inset:0;clip-path:polygon(var(--poly));
-  transform:translateZ(calc(var(--z) + var(--pop) + 1px)) translate(var(--openx), var(--openy)) scale(var(--s));
-  transform-origin:var(--cx) var(--cy);
-  background:radial-gradient(58% 68% at 50% 45%, rgba(255,190,115,.20), rgba(200,35,42,.09) 55%, transparent 74%);
-  opacity:0;transition:opacity .5s ease;mix-blend-mode:screen;pointer-events:none}
-.room.is-open .room__glow{opacity:1;animation:flicker 3.6s ease-in-out infinite}
-@keyframes flicker{0%,100%{opacity:1}42%{opacity:.78}61%{opacity:.94}77%{opacity:.7}}
-
-/* затемнення сцени */
-.scrim{display:none}
-.manor__base{transition:opacity .45s ease, filter .45s ease}
-.scene.is-busy .manor__base{filter:brightness(.5) saturate(.78)}
-.scene.is-in.is-busy .room:not(.is-open) .room__face{filter:brightness(.5) saturate(.78)
-  drop-shadow(0 0 0 #5d5566) drop-shadow(0 0 0 #2b2733)
-  drop-shadow(0 0 0 #17141d) drop-shadow(0 0 0 #0b0a10) drop-shadow(0 0 0 rgba(0,0,0,0))}
+/* прозорі полігони ловлять курсор — растеризації нуль */
+.hit{position:absolute;inset:0;z-index:10;width:100%;height:100%}
+.hit polygon{fill:#fff;fill-opacity:0;pointer-events:fill;
+  cursor:url("assets/cursor-hand.png") 16 8, pointer}
 
 /* ───────── мітки й картки ───────── */
-.pin{position:absolute;transform:translate(-50%,50%);z-index:40;pointer-events:none;transition:opacity .4s}
-.pin.is-open{transform:translate(-50%,50%) translateZ(120px) scale(.929)}
-.pin__dot{position:relative;width:34px;height:34px;margin:0 auto;display:grid;place-items:center;
-  pointer-events:auto;cursor:pointer}
+.pin{position:absolute;transform:translate(-50%,50%);z-index:20;pointer-events:none;transition:opacity .3s}
+.pin__dot{position:relative;width:32px;height:32px;margin:0 auto;display:grid;place-items:center}
 .pin__dot i{display:block;width:9px;height:9px;rotate:45deg;background:var(--blood-lt);
-  box-shadow:0 0 14px 4px rgba(200,35,42,.55);transition:.35s}
+  box-shadow:0 0 12px 3px rgba(200,35,42,.5);transition:.3s}
 .pin__dot::after{content:"";position:absolute;inset:0;border:1px solid rgba(201,168,106,.45);rotate:45deg;
-  opacity:.7;transition:.45s}
-.pin:hover .pin__dot i,.pin.is-open .pin__dot i{scale:1.5;background:#ffd08a;box-shadow:0 0 22px 7px rgba(255,190,110,.6)}
-.pin.is-open .pin__dot::after{scale:1.35;opacity:1;border-color:rgba(255,208,138,.8)}
-.pin__label{margin-top:6px;text-align:center;font-family:"Cormorant Garamond",serif;font-style:italic;
-  font-size:clamp(17px,1.5vw,27px);color:#f4ede4;white-space:nowrap;
-  text-shadow:0 2px 16px #000,0 0 30px rgba(0,0,0,.9);transition:.35s}
-.pin__note{margin-top:2px;text-align:center;font-family:"Cormorant Garamond",serif;
-  font-size:clamp(12px,1vw,16px);color:#cfc4b8;max-width:210px;text-shadow:0 2px 12px #000}
-.pin.is-open .pin__label{color:#ffd9a6}
-.scene.is-busy .pin:not(.is-open){opacity:.22}
+  opacity:.7;transition:.3s}
+.pin.on .pin__dot i{scale:1.45;background:#ffd08a;box-shadow:0 0 18px 6px rgba(255,190,110,.55)}
+.pin.on .pin__dot::after{scale:1.3;opacity:1;border-color:rgba(255,208,138,.8)}
+.pin__label{margin-top:5px;text-align:center;font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;
+  font-size:clamp(17px,1.5vw,27px);color:#f4ede4;white-space:nowrap;text-shadow:0 2px 14px #000;transition:.3s}
+.pin__note{margin-top:2px;text-align:center;font-family:"Cormorant Garamond",Georgia,serif;
+  font-size:clamp(12px,1vw,16px);color:#cfc4b8;max-width:210px;text-shadow:0 2px 10px #000}
+.pin.on .pin__label{color:#ffd9a6}
+.has-open .pin:not(.on){opacity:.2}
 
-.card{position:absolute;left:50%;top:calc(100% + 16px);translate:-50% 14px;width:min(320px,74vw);
+.card{position:absolute;left:50%;top:calc(100% + 14px);translate:-50% 12px;width:min(320px,74vw);
   background:linear-gradient(180deg,#15111c,#0b0810);border:1px solid rgba(201,168,106,.34);
-  padding:14px 14px 18px;box-shadow:0 30px 70px rgba(0,0,0,.85);
-  opacity:0;pointer-events:none;transition:.42s cubic-bezier(.2,.8,.2,1);z-index:60}
-.pin.is-open .card{opacity:1;translate:-50% 0;pointer-events:auto}
-.card--l{left:0;translate:-8px 14px}   .pin.is-open .card--l{translate:-8px 0}
-.card--r{left:auto;right:0;translate:8px 14px} .pin.is-open .card--r{translate:8px 0}
-.card img,.card picture{width:100%;height:auto;display:block}
-.card__num{font-family:"Cormorant Garamond",serif;color:var(--gold);letter-spacing:.3em;font-size:13px;margin:12px 0 4px}
-.card h3{font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:600;font-size:26px;margin:0 0 6px;color:#f7f1e8}
-.card p{margin:0 0 14px;font-size:13.5px;line-height:1.5;color:#b9b0a6}
-.card a.btn,.mcard a{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-size:12px;
-  font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#f7f1e8;
-  border:1px solid rgba(201,168,106,.5);padding:11px 18px;transition:.3s}
-.card a.btn:hover{background:var(--blood);border-color:var(--blood-lt)}
+  padding:14px 14px 18px;box-shadow:0 24px 50px rgba(0,0,0,.8);
+  opacity:0;pointer-events:none;transition:opacity .28s ease, translate .28s ease;z-index:30}
+.pin.on .card{opacity:1;translate:-50% 0;pointer-events:auto}
+.card--l{left:0;translate:-8px 12px}   .pin.on .card--l{translate:-8px 0}
+.card--r{left:auto;right:0;translate:8px 12px} .pin.on .card--r{translate:8px 0}
+.card img,.card picture,.mcard img,.mcard picture{width:100%;height:auto;display:block}
+.card__num{font-family:"Cormorant Garamond",Georgia,serif;color:var(--gold);letter-spacing:.3em;
+  font-size:13px;margin:12px 0 4px}
+.card h3,.mcard h3{font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:600;
+  font-size:26px;margin:0 0 6px;color:#f7f1e8}
+.card p,.mcard p{margin:0 0 14px;font-size:13.5px;line-height:1.5;color:#b9b0a6}
+.card a,.mcard a{display:inline-block;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.16em;
+  text-transform:uppercase;color:#f7f1e8;border:1px solid rgba(201,168,106,.5);padding:11px 18px;transition:.25s}
+.card a:hover{background:var(--blood);border-color:var(--blood-lt)}
 
-/* атмосфера */
-.fog{position:absolute;inset:-6% -4%;pointer-events:none;z-index:5;
-  background:radial-gradient(52% 40% at 50% 26%, rgba(120,90,150,.10), transparent 70%),
-             radial-gradient(40% 30% at 18% 62%, rgba(70,110,140,.09), transparent 70%),
-             radial-gradient(45% 34% at 84% 58%, rgba(150,70,70,.08), transparent 70%);
-  animation:drift 26s ease-in-out infinite alternate;mix-blend-mode:screen}
-@keyframes drift{from{transform:translate3d(-1.4%,0,0)}to{transform:translate3d(1.8%,-1.6%,0) scale(1.05)}}
-.dust{position:absolute;inset:0;pointer-events:none;z-index:30;overflow:hidden}
-.dust i{position:absolute;width:2px;height:2px;border-radius:50%;background:rgba(255,206,150,.75);
-  filter:blur(.4px);animation:rise linear infinite}
-@keyframes rise{0%{transform:translateY(0);opacity:0}10%{opacity:.85}90%{opacity:.5}
-  100%{transform:translateY(-190px) translateX(28px);opacity:0}}
+/* атмосфера — статична, без анімацій і без blend-режимів */
+.fog{position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:radial-gradient(52% 40% at 50% 26%, rgba(120,90,150,.09), transparent 70%),
+             radial-gradient(45% 34% at 84% 58%, rgba(150,70,70,.07), transparent 70%)}
 
-/* кнопка виходу з режиму «всередині кімнати» */
-.back{position:absolute;left:50%;translate:-50% 0;bottom:-54px;z-index:120;
-  font:inherit;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#d8cec3;
-  background:rgba(12,10,16,.92);border:1px solid rgba(201,168,106,.35);padding:10px 18px;
-  cursor:pointer;opacity:0;pointer-events:none;transition:.35s}
-.back.on{opacity:1;pointer-events:auto}
-
-/* панель кімнати на телефоні */
+/* телефон */
 .mcard{display:none;max-width:460px;margin:16px auto 0;background:linear-gradient(180deg,#15111c,#0b0810);
-  border:1px solid rgba(201,168,106,.34);padding:12px 12px 16px;opacity:0;transform:translateY(10px);
-  transition:.4s;pointer-events:none}
-.mcard.on{opacity:1;transform:none;pointer-events:auto}
-.mcard img,.mcard picture{width:100%;height:auto;display:block}
-.mcard h3{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:24px;margin:10px 0 4px;color:#f7f1e8}
-.mcard p{margin:0 0 12px;font-size:13.5px;color:#b9b0a6}
+  border:1px solid rgba(201,168,106,.34);padding:12px 12px 16px;opacity:0;transition:opacity .3s;
+  pointer-events:none}
+.mcard.on{opacity:1;pointer-events:auto}
 .tabs{display:none;gap:8px;justify-content:center;flex-wrap:wrap;margin:16px auto 0}
-.tabs button{font:inherit;font-size:12px;letter-spacing:.05em;color:#d6ccc2;background:rgba(16,14,20,.9);
+.tabs button{font:inherit;font-size:12px;color:#d6ccc2;background:rgba(16,14,20,.9);
   border:1px solid rgba(201,168,106,.3);padding:10px 14px;cursor:pointer}
 .tabs button.on{background:var(--blood);border-color:var(--blood-lt);color:#fff}
 
-/* панель прототипу */
 .hud{position:fixed;left:50%;bottom:16px;translate:-50% 0;z-index:200;display:flex;gap:6px;flex-wrap:wrap;
-  justify-content:center;max-width:94vw;background:rgba(10,9,14,.88);border:1px solid rgba(201,168,106,.28);
-  padding:6px;backdrop-filter:blur(8px)}
+  justify-content:center;max-width:94vw;background:rgba(10,9,14,.94);border:1px solid rgba(201,168,106,.28);padding:6px}
 .hud button{font:inherit;font-size:11.5px;font-weight:600;color:#cfc5ba;background:transparent;
-  border:1px solid transparent;padding:8px 12px;cursor:pointer;transition:.25s;white-space:nowrap}
+  border:1px solid transparent;padding:8px 12px;cursor:pointer;transition:.2s;white-space:nowrap}
 .hud button:hover{color:#fff;border-color:rgba(201,168,106,.4)}
 .hud button.on{background:var(--blood);color:#fff;border-color:var(--blood-lt)}
-.hint{position:fixed;left:50%;bottom:66px;translate:-50% 0;z-index:200;color:#8b8289;font-size:11.5px;
-  letter-spacing:.04em;pointer-events:none;transition:opacity .5s;text-align:center;max-width:90vw}
+.hint{position:fixed;left:50%;bottom:64px;translate:-50% 0;z-index:200;color:#8b8289;font-size:11.5px;
+  pointer-events:none;transition:opacity .4s;text-align:center;max-width:90vw}
 
-/* «як зараз» — увесь 3D вимкнено */
-.scene.flat .room__face{transform:translateZ(0) scale(1)!important;filter:none!important;opacity:1!important}
-.scene.flat .room__glow,.scene.flat .scrim{opacity:0!important}
-.scene.flat,.scene.flat .manor{transform:none!important}
-.scene.flat .pin{opacity:1!important}
-.scene.flat .manor__base{opacity:1!important}
+/* «як зараз» — ефекти вимкнені */
+.flat .room,.flat .glow,.flat .dim{opacity:0!important}
+.flat .manor{transform:none!important}
+.flat .pin{opacity:1!important}
 
-/* ───────── телефон: плоский режим + «зайти в кімнату» ───────── */
 @media (max-width:989px){
-  .room__face{background-image:url("assets/manor-900.webp");
+  .wrap{padding:34px 12px 200px}
+  .stage{perspective:none;padding:14px 0}
+  .room{background-image:url("assets/manor-900.webp");
     background-image:image-set(url("assets/manor-900.avif") type("image/avif"),
                                url("assets/manor-900.webp") type("image/webp"))}
-  .wrap{padding:34px 12px 150px}
-  .stage{perspective:none;padding:20px 0 10px;margin:-20px 0 -10px}
+  :root{--grow:1.34}
   .pin__note{display:none}
   .pin .card{display:none}
-  .pin:not(.is-open) .pin__label{opacity:0}
+  .pin:not(.on) .pin__label{opacity:0}
   .pin__label{font-size:14px}
-  .pin.is-open{transform:translate(-50%,50%)}
   body .mcard{display:block}
   .tabs{display:flex}
-  .scene.is-in .room.is-open .room__face{
-    transform:scale(1.38)!important;
-    filter:brightness(1.45)
-           drop-shadow(0 0 1px #e6c07a) drop-shadow(0 0 3px rgba(230,192,122,.5))
-           drop-shadow(0 3px 0 #5d5566) drop-shadow(0 6px 0 #2b2733)
-           drop-shadow(0 11px 0 #17141d) drop-shadow(0 18px 0 #0b0a10)
-           drop-shadow(0 20px 26px rgba(0,0,0,.95))!important}
-  .scrim{transform:none}
-  .scene.is-in .room.is-open .room__glow{transform:scale(1.38)}
-  /* при заході в кімнату мітка зайва — назва вже є в панелі, а зум її роздуває */
-  .scene.is-dived .pin{opacity:0}
-  .wrap{padding-bottom:215px}
   .hud{bottom:10px;padding:5px}
   .hud button{font-size:11px;padding:7px 10px}
-  .hint{bottom:58px}
+  .hint{display:none}
 }
-@media (prefers-reduced-motion:reduce){.fog,.dust i{animation:none}}
-html.no-anim *{transition-duration:0s!important;animation:none!important}
+@media (prefers-reduced-motion:reduce){.room,.manor,.glow{transition:none}}
 html.shot .hud,html.shot .hint{display:none}
 </style>
 </head>
@@ -241,106 +163,78 @@ html.shot .hud,html.shot .hint{display:none}
   <p class="sub" id="sub">прототип · наведи на кімнату — вона одразу виходить на передній план</p>
 
   <div class="stage" id="stage">
-    <div class="scene" id="scene" data-mode="lift">
-      <div class="manor" id="manor">
-        <picture>
-          <source type="image/avif" media="(max-width:989px)" srcset="assets/manor-900.avif">
-          <source type="image/webp" media="(max-width:989px)" srcset="assets/manor-900.webp">
-          <source type="image/avif" srcset="assets/manor-1800.avif">
-          <source type="image/webp" srcset="assets/manor-1800.webp">
-          <img class="manor__base" src="assets/manor-1800.webp" alt="Fright Delights manor"
-               width="1800" height="1461" fetchpriority="high" decoding="async">
-        </picture>
-        <div class="fog"></div>
-        <div class="dust" id="dust"></div>
-        <div class="scrim" id="scrim"></div>
-      </div>
+    <div class="manor" id="manor">
+      <picture>
+        <source type="image/avif" media="(max-width:989px)" srcset="assets/manor-900.avif">
+        <source type="image/webp" media="(max-width:989px)" srcset="assets/manor-900.webp">
+        <source type="image/avif" srcset="assets/manor-1800.avif">
+        <source type="image/webp" srcset="assets/manor-1800.webp">
+        <img class="manor__base" src="assets/manor-1800.webp" alt="Fright Delights manor"
+             width="1800" height="1461" fetchpriority="high" decoding="async">
+      </picture>
+      <div class="fog"></div>
+      <div class="dim"></div>
+      <div class="room" id="room"></div>
+      <div class="glow" id="glow"></div>
+      <svg class="hit" id="hit" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
     </div>
-    <button class="back" id="back">← вийти з кімнати</button>
   </div>
 
   <div class="tabs" id="tabs"></div>
   <div class="mcard" id="mcard"></div>
 </div>
 
-<p class="hint" id="hint">рухай мишею — маєток нахиляється за тобою</p>
+<p class="hint" id="hint">наведи на кімнату</p>
 <div class="hud">
-  <button id="mLift" class="on">3D</button>
-  <button id="mDrawer" hidden>Шухляда</button>
-  <button id="bExpl">Розібрати</button>
+  <button id="bFx" class="on">Ефект</button>
   <button id="bFlat">Як зараз</button>
 </div>
 
 <script>
 const P = {
-  grand_hall:  [[38.5,14.6],[59.3,14.6],[59.3,17.6],[62.8,19.6],[62.8,47.6],[35.3,47.6],[35.3,19.6],[38.5,17.6]],
-  costume:     [[9.6,28.2],[35.3,26.8],[35.3,47.6],[5.8,47.6]],
-  curiosity:   [[62.8,26.8],[74.0,26.8],[74.4,24.1],[84.2,24.1],[84.6,26.8],[93.9,26.8],[94.6,47.6],[62.8,47.6]],
-  r4:[[5.8,47.6],[28.5,47.6],[28.5,63.5],[5.0,63.5]],
-  r5:[[28.5,47.6],[46.5,47.6],[46.5,63.5],[28.5,63.5]],
-  r6:[[54.5,47.6],[78.0,47.6],[78.0,63.5],[54.5,63.5]],
-  r7:[[78.0,47.6],[95.0,47.6],[95.0,63.5],[78.0,63.5]],
-  r8:[[5.0,63.5],[34.5,63.5],[34.5,86.0],[4.5,86.0]],
-  r9:[[34.5,63.5],[63.0,63.5],[63.0,86.0],[34.5,86.0]],
-  r10:[[63.0,63.5],[95.0,63.5],[95.0,86.0],[63.0,86.0]]
+  grand_hall:[[38.5,14.6],[59.3,14.6],[59.3,17.6],[62.8,19.6],[62.8,47.6],[35.3,47.6],[35.3,19.6],[38.5,17.6]],
+  costume:   [[9.6,28.2],[35.3,26.8],[35.3,47.6],[5.8,47.6]],
+  curiosity: [[62.8,26.8],[74.0,26.8],[74.4,24.1],[84.2,24.1],[84.6,26.8],[93.9,26.8],[94.6,47.6],[62.8,47.6]]
 };
 const ROOMS = [
-  {k:'costume',    z:0, d:.03, n:'02', title:'The Costume Wing',     text:'Distinctive costumes',
-   img:'assets/The_Costume_Wing_Room.jpg', href:'#', left:11.6, bottom:52.2, click:true},
-  {k:'grand_hall', z:0, d:0,   n:'01', title:'The Grand Hall',       text:'Newest arrivals and seasonal highlights',
-   img:'assets/The_Grand_Hall_Room.jpg', href:'#', left:39.7, bottom:53.1, click:true, thick:1.5},
-  {k:'curiosity',  z:0, d:.06, n:'03', title:'The Curiosity Cabinet',text:'Rare collectibles and unusual finds',
-   img:'assets/The_Curiosity_Cabinet_Room.jpg', href:'#', left:68.2, bottom:52.2, click:true},
-  {k:'r4',z:16,d:.08},{k:'r5',z:16,d:.01},{k:'r6',z:16,d:.12},{k:'r7',z:16,d:.14},
-  {k:'r8',z:32,d:.17},{k:'r9',z:32,d:.19},{k:'r10',z:32,d:.21}
+  {k:'costume',   n:'02', title:'The Costume Wing',     text:'Distinctive costumes',
+   img:'assets/The_Costume_Wing_Room', href:'#', left:11.6, bottom:52.2},
+  {k:'grand_hall',n:'01', title:'The Grand Hall',       text:'Newest arrivals and seasonal highlights',
+   img:'assets/The_Grand_Hall_Room', href:'#', left:39.7, bottom:53.1},
+  {k:'curiosity', n:'03', title:'The Curiosity Cabinet',text:'Rare collectibles and unusual finds',
+   img:'assets/The_Curiosity_Cabinet_Room', href:'#', left:68.2, bottom:52.2}
 ];
 
-const PERSP = 1700;
-const isMobile = () => window.matchMedia('(max-width:989px)').matches;
-const manor=document.getElementById('manor'), scene=document.getElementById('scene'),
-      stage=document.getElementById('stage'), hint=document.getElementById('hint'),
-      backBtn=document.getElementById('back'), mcard=document.getElementById('mcard'),
-      tabs=document.getElementById('tabs'), sub=document.getElementById('sub'),
-      scrim=document.getElementById('scrim');
-const els={};
-const MOB = isMobile();
+const stage=document.getElementById('stage'), manor=document.getElementById('manor'),
+      room=document.getElementById('room'), glow=document.getElementById('glow'),
+      hit=document.getElementById('hit'), tabs=document.getElementById('tabs'),
+      mcard=document.getElementById('mcard'), hint=document.getElementById('hint'),
+      sub=document.getElementById('sub');
+const MOB = window.matchMedia('(max-width:989px)').matches;
+
+const pic = (base) =>
+  '<picture><source type="image/avif" srcset="'+base+'.avif">'+
+  '<source type="image/webp" srcset="'+base+'.webp">'+
+  '<img src="'+base+'.webp" alt="" loading="lazy" decoding="async" width="560" height="305"></picture>';
 
 ROOMS.forEach(r=>{
-  const poly=P[r.k].map(p=>p[0]+'% '+p[1]+'%').join(',');
-  const z = MOB ? 0 : r.z;                     /* на телефоні 3D вимкнено → без компенсації */
-  const s = MOB ? 1 : (PERSP - r.z)/PERSP;
-  const room=document.createElement('div');
-  room.className='room'+(r.click?' room--clickable':'');
-  room.style.setProperty('--poly',poly);
-  room.style.setProperty('--z',z+'px');
-  room.style.setProperty('--s',s);
-  room.style.setProperty('--delay',r.d+'s');
   const box=P[r.k];
-  const cx=box.reduce((a,p)=>a+p[0],0)/box.length, cy=box.reduce((a,p)=>a+p[1],0)/box.length;
-  r.cx=cx; r.cy=cy;
-  room.style.setProperty('--cx',cx+'%');
-  room.style.setProperty('--cy',cy+'%');
-  /* при translateZ(d) картинка росте від точки перспективи → зсуваємо назад,
-     щоб кімната збільшувалась саме там, де вона є */
-  const POP=320, k=PERSP/(PERSP-POP);
-  room.style.setProperty('--openx', (-(k-1)*(cx-50)).toFixed(2)+'%');
-  room.style.setProperty('--openy', (-(k-1)*(cy-42)-1.2).toFixed(2)+'%');
-  if(r.thick) room.style.setProperty('--thick',r.thick);
-  room.innerHTML='<div class="room__glow"></div><div class="room__face"></div>';
-  manor.insertBefore(room, scrim);
-  els[r.k]=room;
-  if(!r.click) return;
+  r.poly = box.map(p=>p[0]+'% '+p[1]+'%').join(',');
+  r.cx = (box.reduce((a,p)=>a+p[0],0)/box.length)+'%';
+  r.cy = (box.reduce((a,p)=>a+p[1],0)/box.length)+'%';
 
+  const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  poly.setAttribute('points', box.map(p=>p[0]+','+p[1]).join(' '));
+  hit.appendChild(poly);
+  poly.addEventListener('pointerenter',()=>open_(r));
+  poly.addEventListener('pointerdown',()=>open_(r));
+  if(!MOB) poly.addEventListener('pointerleave',()=>close_(r));
 
   const pin=document.createElement('div');
   pin.className='pin'; pin.style.left=r.left+'%'; pin.style.bottom=r.bottom+'%';
-  pin.innerHTML='<div class="card"><picture>'+
-    '<source type="image/avif" srcset="'+r.img.replace(/\.jpg$/,'.avif')+'">'+
-    '<source type="image/webp" srcset="'+r.img.replace(/\.jpg$/,'.webp')+'">'+
-    '<img src="'+r.img.replace(/\.jpg$/,'.webp')+'" alt="" loading="lazy" decoding="async" width="560" height="305">'+
-    '</picture>'+
+  pin.innerHTML='<div class="card">'+pic(r.img)+
     '<div class="card__num">'+r.n+'</div><h3>'+r.title+'</h3><p>'+r.text+'</p>'+
-    '<a class="btn" href="'+r.href+'">visit '+r.title+'</a></div>'+
+    '<a href="'+r.href+'">visit '+r.title+'</a></div>'+
     '<div class="pin__dot"><i></i></div><div class="pin__label">'+r.title+'</div>'+
     '<div class="pin__note">'+r.text+'</div>';
   manor.appendChild(pin);
@@ -348,165 +242,85 @@ ROOMS.forEach(r=>{
   const card=pin.querySelector('.card');
   if(r.left<26) card.classList.add('card--l'); else if(r.left>74) card.classList.add('card--r');
 
-  const face=room.querySelector('.room__face');
-  const enter=()=>{ clearTimeout(leaveT); setOpen(r); };
-  const leave=()=>{ clearTimeout(leaveT);
-                    leaveT=setTimeout(()=>{ if(current===r) setOpen(null); },60); };
-  /* pointerenter ловить і мишу, і перше торкання — реакція миттєва */
-  face.addEventListener('pointerenter',enter);
-  pin.addEventListener('pointerenter',enter);
-  face.addEventListener('pointerdown',enter);
-  pin.addEventListener('pointerdown',enter);
-  if(!MOB){
-    face.addEventListener('pointerleave',leave);
-    pin.addEventListener('pointerleave',leave);
-  }
-  face.addEventListener('click',e=>e.preventDefault());
+  const b=document.createElement('button'); b.textContent=r.title;
+  b.onclick=()=>{ current===r ? close_(r,true) : open_(r); };
+  tabs.appendChild(b); r.tab=b;
 });
 
-/* ───────── стани ───────── */
-let current=null, dived=false, leaveT=null, exploded=false, flat=false;
-
-function setOpen(r){
-  if(flat||exploded) return;
-  ROOMS.forEach(x=>{ els[x.k].classList.remove('is-open'); if(x.pin) x.pin.classList.remove('is-open'); });
+/* ───────── один шар — підставляємо потрібний полігон ───────── */
+let current=null, closeT=null, flat=false;
+function open_(r){
+  if(flat || current===r) return;
+  clearTimeout(closeT);
   current=r;
-  scene.classList.toggle('is-busy',!!r);
-  scene.classList.toggle('has-open',!!r);
-  if(r){ els[r.k].classList.add('is-open'); if(r.pin) r.pin.classList.add('is-open'); }
-  if(r&&r.click){
-    mcard.innerHTML='<picture>'+
-      '<source type="image/avif" srcset="'+r.img.replace(/\.jpg$/,'.avif')+'">'+
-      '<source type="image/webp" srcset="'+r.img.replace(/\.jpg$/,'.webp')+'">'+
-      '<img src="'+r.img.replace(/\.jpg$/,'.webp')+'" alt="" loading="lazy" decoding="async" width="560" height="305">'+
-      '</picture><h3>'+r.title+'</h3><p>'+r.text+'</p>'+
-                    '<a href="'+r.href+'">visit '+r.title+'</a>';
-    mcard.classList.add('on');
-  } else mcard.classList.remove('on');
-  hint.style.opacity = r?0:1;
-  [...tabs.children].forEach(b=>b.classList.toggle('on', !!r && b.dataset.k===r.k));
+  [room,glow].forEach(el=>{
+    el.style.setProperty('--poly', r.poly);
+    el.style.setProperty('--cx', r.cx);
+    el.style.setProperty('--cy', r.cy);
+  });
+  stage.classList.add('has-open');
+  ROOMS.forEach(x=>{ x.pin.classList.toggle('on', x===r); x.tab.classList.toggle('on', x===r); });
+  mcard.innerHTML = pic(r.img)+'<h3>'+r.title+'</h3><p>'+r.text+'</p><a href="'+r.href+'">visit '+r.title+'</a>';
+  mcard.classList.add('on');
+  hint.style.opacity=0;
 }
-
-/* «зайти в кімнату»: камера під'їжджає впритул */
-function dive(r){
-  if(flat) return;
-  if(exploded) collapse();
-  if(current===r){ undive(); return; }
-  setOpen(r);
-}
-function undive(){
-  dived=false; scene.style.transform=''; backBtn.classList.remove('on');
-  scene.classList.remove('is-dived');
-  ROOMS.forEach(x=>els[x.k].classList.remove('is-dived'));
-  setOpen(null);
+function close_(r,now){
+  clearTimeout(closeT);
+  closeT=setTimeout(()=>{
+    current=null;
+    stage.classList.remove('has-open');
+    ROOMS.forEach(x=>{ x.pin.classList.remove('on'); x.tab.classList.remove('on'); });
+    mcard.classList.remove('on');
+    hint.style.opacity=1;
+  }, now?0:70);
 }
 /* тап повз кімнати — закрити */
 document.addEventListener('pointerdown',e=>{
-  if(!MOB) return;
-  if(e.target.closest('.room__face')||e.target.closest('.pin')||e.target.closest('.tabs')||
+  if(!MOB || !current) return;
+  if(e.target.closest('.hit polygon')||e.target.closest('.tabs')||
      e.target.closest('.mcard')||e.target.closest('.hud')) return;
-  setOpen(null);
+  close_(current,true);
 });
-backBtn.addEventListener('click',undive);
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') undive(); });
-stage.addEventListener('click',e=>{ if(e.target===stage||e.target===scene||e.target===manor) undive(); });
 
-/* ───────── нахил за мишею ───────── */
-let rx=0,ry=0,trx=0,try_=0,raf=null;
-stage.addEventListener('pointermove',e=>{
-  if(flat||dived||MOB||e.pointerType!=='mouse') return;
-  const b=stage.getBoundingClientRect();
-  trx=-((e.clientY-b.top)/b.height-.5)*7; try_=((e.clientX-b.left)/b.width-.5)*8.5;
-  if(!raf) raf=requestAnimationFrame(tick);
-});
-stage.addEventListener('pointerleave',()=>{trx=0;try_=0;if(!raf)raf=requestAnimationFrame(tick);});
-function tick(){
-  rx+=(trx-rx)*.09; ry+=(try_-ry)*.09;
-  manor.style.transform='rotateX('+rx.toFixed(3)+'deg) rotateY('+ry.toFixed(3)+'deg)';
-  raf=(Math.abs(trx-rx)>.01||Math.abs(try_-ry)>.01)?requestAnimationFrame(tick):null;
+/* ───────── нахил: одна трансформація на весь блок ───────── */
+if(!MOB){
+  let rx=0,ry=0,tx=0,ty=0,raf=null;
+  stage.addEventListener('pointermove',e=>{
+    if(flat||e.pointerType!=='mouse') return;
+    const b=stage.getBoundingClientRect();
+    tx=-((e.clientY-b.top)/b.height-.5)*5; ty=((e.clientX-b.left)/b.width-.5)*6;
+    if(!raf) raf=requestAnimationFrame(tick);
+  });
+  stage.addEventListener('pointerleave',()=>{tx=0;ty=0;if(!raf)raf=requestAnimationFrame(tick);});
+  function tick(){
+    rx+=(tx-rx)*.12; ry+=(ty-ry)*.12;
+    manor.style.transform='rotateX('+rx.toFixed(2)+'deg) rotateY('+ry.toFixed(2)+'deg)';
+    raf=(Math.abs(tx-rx)>.02||Math.abs(ty-ry)>.02)?requestAnimationFrame(tick):null;
+  }
 }
 
-/* поява + страховка, щоб секція ніколи не лишилась порожньою */
-new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting) scene.classList.add('is-in');}),{threshold:.08}).observe(stage);
-setTimeout(()=>scene.classList.add('is-in'),1400);
-
-/* пил */
-const dust=document.getElementById('dust');
-for(let i=0;i<(MOB?18:46);i++){
-  const d=document.createElement('i');
-  d.style.left=(4+Math.random()*92)+'%'; d.style.top=(24+Math.random()*64)+'%';
-  d.style.animationDuration=(7+Math.random()*11)+'s'; d.style.animationDelay=(-Math.random()*14)+'s';
-  d.style.opacity=.2+Math.random()*.7; dust.appendChild(d);
-}
-
-/* таби (телефон) */
-ROOMS.filter(r=>r.click).forEach(r=>{
-  const b=document.createElement('button'); b.textContent=r.title; b.dataset.k=r.k;
-  b.onclick=()=>{ (dived&&current===r) ? undive() : dive(r); };
-  tabs.appendChild(b);
-});
+/* поява */
+new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting) stage.classList.add('is-in'); }),
+  {threshold:.05}).observe(stage);
+setTimeout(()=>stage.classList.add('is-in'),1200);
 if(MOB) sub.textContent='прототип · торкнись кімнати — вона одразу виходить на передній план';
 
-/* режими */
-const mLift=document.getElementById('mLift'), mDrawer=document.getElementById('mDrawer'),
-      bExpl=document.getElementById('bExpl'), bFlat=document.getElementById('bFlat');
-function setMode(m){
-  flat=false; scene.classList.remove('flat');
-  scene.dataset.mode=m;
-  mLift.classList.toggle('on',m==='lift'); mDrawer.classList.toggle('on',m==='drawer');
-  bFlat.classList.remove('on');
-}
-mLift.onclick=()=>{undive();collapse();setMode('lift');};
-mDrawer.onclick=()=>{undive();collapse();setMode('drawer');};
-bFlat.onclick=()=>{undive();collapse();setOpen(null);flat=true;scene.classList.add('flat');
-  bFlat.classList.add('on');mLift.classList.remove('on');mDrawer.classList.remove('on');bExpl.classList.remove('on');};
-bExpl.onclick=()=>{
-  if(flat) setMode('lift');
-  undive();
-  if(exploded){ collapse(); } else { exploded=true; bExpl.classList.add('on'); explode(); }
-};
-function explode(){
-  setOpen(null);
-  ROOMS.forEach((r,i)=>{
-    const f=els[r.k].querySelector('.room__face'), g=els[r.k].querySelector('.room__glow');
-    const box=P[r.k], cx=box.reduce((a,p)=>a+p[0],0)/box.length, cy=box.reduce((a,p)=>a+p[1],0)/box.length;
-    const dx=(cx-50)*(MOB?.14:.21), dy=(cy-56)*(MOB?.14:.21);
-    const t = MOB
-      ? 'translate('+dx+'%,'+dy+'%) scale(.9)'
-      : 'translate('+dx+'%,'+(dy-2)+'%) translateZ('+(r.z+40+i*12)+'px) scale('+((PERSP-r.z)/PERSP*.9)+')';
-    f.style.transform=t; f.style.transitionDelay=(i*.045)+'s';
-    f.style.filter='brightness(1.14) drop-shadow(0 3px 0 #5d5566) drop-shadow(0 7px 0 #2b2733) '+
-                   'drop-shadow(0 14px 0 #17141d) drop-shadow(0 24px 0 #0b0a10) drop-shadow(0 30px 40px rgba(0,0,0,.92))';
-    g.style.transform=t;
-  });
-  manor.querySelectorAll('.pin').forEach(p=>p.style.opacity=.14);
-  scene.classList.add('is-busy');
-}
-function collapse(){
-  ROOMS.forEach(r=>{
-    const f=els[r.k].querySelector('.room__face'), g=els[r.k].querySelector('.room__glow');
-    f.style.transform=''; f.style.filter=''; f.style.transitionDelay=''; g.style.transform='';
-  });
-  manor.querySelectorAll('.pin').forEach(p=>p.style.opacity='');
-  exploded=false; bExpl.classList.remove('on');
-  if(!current) scene.classList.remove('is-busy');
-}
+/* панель прототипу */
+const bFx=document.getElementById('bFx'), bFlat=document.getElementById('bFlat');
+bFx.onclick=()=>{ flat=false; stage.classList.remove('flat'); bFx.classList.add('on'); bFlat.classList.remove('on'); };
+bFlat.onclick=()=>{ if(current) close_(current,true); flat=true; stage.classList.add('flat');
+  bFlat.classList.add('on'); bFx.classList.remove('on'); };
 
-/* демо-стани для знімків: ?state=open|dive|explode|flat &room=..&mode=..&shot=1 */
-(function demo(){
+/* демо-стан для знімків: ?state=open&room=..&shot=1 */
+(function(){
   const q=new URLSearchParams(location.search);
   if(q.get('shot')) document.documentElement.classList.add('shot');
-  if(q.get('mode')) setMode(q.get('mode'));
-  const st=q.get('state'); if(!st) return;
-  document.documentElement.classList.add('no-anim');
-  scene.classList.add('is-in');
-  requestAnimationFrame(()=>{
+  if(q.get('state')==='open'){
+    stage.classList.add('is-in');
     const r=ROOMS.find(x=>x.k===(q.get('room')||'costume'));
-    if(st==='explode'){ exploded=true; bExpl.classList.add('on'); explode(); }
-    else if(st==='dive' && r) dive(r);
-    else if(st==='open' && r) setOpen(r);
-    else if(st==='flat') bFlat.onclick();
-  });
+    if(r) requestAnimationFrame(()=>open_(r));
+  }
+  if(q.get('state')==='flat'){ stage.classList.add('is-in'); bFlat.onclick(); }
 })();
 </script>
 </body>
