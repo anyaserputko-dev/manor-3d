@@ -62,7 +62,12 @@ h1.title{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400;
 /* прозорі полігони ловлять курсор — растеризації нуль */
 .hit{position:absolute;inset:0;z-index:10;width:100%;height:100%}
 .hit polygon{fill:#fff;fill-opacity:0;pointer-events:fill;
+  transform-box:fill-box;transform-origin:50% 50%;
+  transition:transform .32s cubic-bezier(.22,.9,.28,1);
   cursor:url("assets/cursor-hand.png") 16 8, pointer}
+.hit polygon.on{transform:scale(var(--grow))}
+/* на дотик зона трохи більша — пальцем влучити важче, ніж курсором */
+@media (hover:none){ .hit polygon{transform:scale(1.02)} }
 
 /* ───────── мітки й картки ───────── */
 .pin{position:absolute;transform:translate(-50%,50%);z-index:20;pointer-events:none;transition:opacity .3s}
@@ -78,6 +83,14 @@ h1.title{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400;
 .pin__note{margin-top:2px;text-align:center;font-family:"Cormorant Garamond",Georgia,serif;
   font-size:clamp(12px,1vw,16px);color:#cfc4b8;max-width:210px;text-shadow:0 2px 10px #000}
 .pin.on .pin__label{color:#ffd9a6}
+.pin__cta{margin-top:4px;text-align:center;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:#e6c07a;opacity:0;transition:opacity .3s ease;text-shadow:0 2px 10px #000;white-space:nowrap}
+.pin.on .pin__cta{opacity:.95}
+.toast{position:fixed;left:50%;bottom:108px;translate:-50% 8px;z-index:300;
+  background:rgba(12,10,16,.96);border:1px solid rgba(201,168,106,.45);color:#f2ece4;
+  padding:11px 18px;font-size:12.5px;letter-spacing:.03em;opacity:0;pointer-events:none;
+  transition:opacity .25s ease, translate .25s ease}
+.toast.on{opacity:1;translate:-50% 0}
 .has-open .pin:not(.on){opacity:.2}
 
 .card{position:absolute;left:50%;top:calc(100% + 14px);translate:-50% 12px;width:min(320px,74vw);
@@ -186,7 +199,7 @@ html.shot .hud,html.shot .hint{display:none}
   <div class="mcard" id="mcard"></div>
 </div>
 
-<p class="hint" id="hint">наведи на кімнату</p>
+<p class="hint" id="hint">наведи на кімнату — і натисни, щоб зайти в неї</p>
 <div class="hud">
   <button id="bFx" class="on">Ефект</button>
   <button id="bFlat">Як зараз</button>
@@ -248,19 +261,29 @@ ROOMS.forEach(r=>{
 
   const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
   poly.setAttribute('points', box.map(p=>p[0]+','+p[1]).join(' '));
-  hit.appendChild(poly);
+  hit.appendChild(poly); r.poly=poly;
   poly.addEventListener('pointerenter',()=>open_(r));
   poly.addEventListener('pointerdown',()=>open_(r));
+  poly.addEventListener('click',e=>{
+    e.preventDefault();
+    /* на дотику перший тап лише відкриває кімнату — інакше палець випадково кудись переходить.
+       Тач дублює події миші, тому орієнтуємось на час відкриття, а не на порядок подій. */
+    if(MOB && Date.now() - (r.openedAt||0) < 500) return;
+    go(r);
+  });
   if(!MOB) poly.addEventListener('pointerleave',()=>close_(r));
 
   const pin=document.createElement('div');
   pin.className='pin'; pin.style.left=r.left+'%'; pin.style.bottom=r.bottom+'%';
   pin.innerHTML='<div class="card"></div>'+
     '<div class="pin__dot"><i></i></div><div class="pin__label">'+r.title+'</div>'+
-    '<div class="pin__note">'+r.text+'</div>';
+    '<div class="pin__note">'+r.text+'</div>'+
+    '<div class="pin__cta">'+(MOB?'торкнись ще раз, щоб зайти':'натисни, щоб зайти')+'</div>';
   manor.appendChild(pin);
   r.pin=pin;
   r.card=pin.querySelector('.card');
+  r.card.addEventListener('click',e=>{ e.preventDefault(); go(r); });
+  r.card.style.cursor='pointer';
   if(r.left<26) r.card.classList.add('card--l'); else if(r.left>74) r.card.classList.add('card--r');
   if(r.bottom<28) r.card.classList.add('card--up');   /* нижні ряди — картка вгору, щоб не вилізти */
 
@@ -270,6 +293,20 @@ ROOMS.forEach(r=>{
 });
 
 /* ───────── один шар — підставляємо потрібний полігон ───────── */
+/* перехід у колекцію кімнати */
+const DEMO = !/myshopify|fright-delights/.test(location.host);
+function go(r){
+  if(DEMO){ toast('перехід у «'+r.title+'» → '+r.href); return; }
+  location.href = r.href;
+}
+let toastT=null;
+function toast(msg){
+  let t=document.getElementById('toast');
+  if(!t){ t=document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add('on');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),1800);
+}
+
 let current=null, closeT=null, settleT=null, flat=false;
 function open_(r){
   if(flat || current===r) return;
@@ -282,7 +319,8 @@ function open_(r){
   st.setProperty('--poly',g.poly);
   st.setProperty('--bgs',g.bgs); st.setProperty('--bgp',g.bgp);
   stage.classList.add('has-open');
-  ROOMS.forEach(x=>{ x.pin.classList.toggle('on', x===r); x.tab.classList.toggle('on', x===r); });
+  ROOMS.forEach(x=>{ x.pin.classList.toggle('on', x===r); x.tab.classList.toggle('on', x===r);
+                     x.poly.classList.toggle('on', x===r); });
   if(!r.filled){
     const body='<div class="card__num">'+r.n+'</div><h3>'+r.title+'</h3><p>'+r.text+'</p>'+
                '<a href="'+r.href+'">visit '+r.title+'</a>';
@@ -292,6 +330,7 @@ function open_(r){
   mcard.innerHTML = pic(r.img)+'<h3>'+r.title+'</h3><p>'+r.text+'</p><a href="'+r.href+'">visit '+r.title+'</a>';
   mcard.classList.add('on');
   hint.style.opacity=0;
+  r.openedAt=Date.now();
   clearTimeout(settleT);
   settleT=setTimeout(()=>{ if(current===r) room.classList.add('settled'); }, 360);
 }
@@ -301,11 +340,16 @@ function close_(r,now){
   closeT=setTimeout(()=>{
     current=null;
     stage.classList.remove('has-open');
-    ROOMS.forEach(x=>{ x.pin.classList.remove('on'); x.tab.classList.remove('on'); });
+    ROOMS.forEach(x=>{ x.pin.classList.remove('on'); x.tab.classList.remove('on'); x.poly.classList.remove('on'); });
     mcard.classList.remove('on');
     hint.style.opacity=1;
   }, now?0:70);
 }
+/* коротке «втискання» на натисканні */
+stage.addEventListener('pointerdown',e=>{ if(e.target.closest('.hit polygon')) stage.classList.add('pressing'); });
+['pointerup','pointercancel','pointerleave'].forEach(ev=>
+  stage.addEventListener(ev,()=>stage.classList.remove('pressing')));
+
 /* тап повз кімнати — закрити */
 document.addEventListener('pointerdown',e=>{
   if(!MOB || !current) return;
