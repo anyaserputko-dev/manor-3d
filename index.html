@@ -16,8 +16,8 @@
   --blood-lt:#c8232a;
   --gold:#c9a86a;
   --persp:1700px;
-  --lift:30px;      /* підйом кімнати вгору */
-  --pop:34px;       /* виїзд на глядача */
+  --lift:0px;       /* підйом більше не потрібен — кімната росте на місці */
+  --pop:320px;      /* виїзд на глядача: кімната виходить на передній план */
   --thick:1;
 }
 *{box-sizing:border-box}
@@ -49,7 +49,8 @@ h1.title{font-family:"Playfair Display","Cormorant Garamond",serif;font-weight:4
 /* «котлован»: те саме місце, але майже чорне — щоб під піднятим блоком не було його копії */
 .room__hole{position:absolute;inset:0;background-image:url("assets/manor.jpg");background-size:100% 100%;
   clip-path:polygon(var(--poly));transform:translateZ(var(--z)) scale(var(--s));
-  filter:brightness(.3) saturate(.5) blur(1px);
+  transform-origin:var(--cx) var(--cy);
+  filter:brightness(.26) saturate(.45) blur(1px);
   opacity:0;transition:opacity .45s ease;pointer-events:none}
 .room.is-open .room__hole{opacity:1}
 
@@ -57,23 +58,24 @@ h1.title{font-family:"Playfair Display","Cormorant Garamond",serif;font-weight:4
 .room__face{position:absolute;inset:0;background-image:url("assets/manor.jpg");background-size:100% 100%;
   clip-path:polygon(var(--poly));
   transform:translateZ(calc(var(--z) + 420px)) translateY(-70px) scale(var(--s));
-  transform-origin:50% 55%;opacity:0;
+  transform-origin:var(--cx) var(--cy);opacity:0;
   filter:brightness(1)
          drop-shadow(0 0 0 #5d5566) drop-shadow(0 0 0 #2b2733)
          drop-shadow(0 0 0 #17141d) drop-shadow(0 0 0 #0b0a10)
          drop-shadow(0 0 0 rgba(0,0,0,0));
-  transition:transform .6s cubic-bezier(.18,.86,.22,1), filter .4s ease, opacity .5s ease;
+  transition:transform .38s cubic-bezier(.22,.9,.28,1), filter .3s ease, opacity .5s ease;
   will-change:transform,filter;pointer-events:auto}
 .room--clickable .room__face{cursor:url("assets/cursor-hand.png") 16 8, pointer}
 
 /* поява при скролі */
 .scene.is-in .room__face{opacity:1;transform:translateZ(var(--z)) scale(var(--s));
-  transition:transform 1s cubic-bezier(.16,.86,.2,1) var(--delay), opacity .6s ease var(--delay), filter .4s ease}
+  transition:transform .9s cubic-bezier(.16,.86,.2,1) var(--delay), opacity .6s ease var(--delay), filter .3s ease}
+.scene.is-in.has-open .room__face{transition:transform .38s cubic-bezier(.22,.9,.28,1), filter .3s ease}
 
 /* ── режим A: діорама (блок піднімається вертикально) ── */
 .scene[data-mode="lift"].is-in .room.is-open .room__face{
-  transform:translateZ(calc(var(--z) + var(--pop))) translateY(calc(var(--lift) * -1)) rotateX(-2deg) scale(var(--s));
-  filter:brightness(1.26) saturate(1.08)
+  transform:translateZ(calc(var(--z) + var(--pop))) translate(var(--openx), var(--openy)) scale(var(--s));
+  filter:brightness(1.45) saturate(1.12)
          drop-shadow(0 0 1px #e6c07a) drop-shadow(0 0 3px rgba(230,192,122,.5))
          drop-shadow(0 calc(2px * var(--thick)) 0 #6a6274)
          drop-shadow(0 calc(4px * var(--thick)) 0 #322d3a)
@@ -113,7 +115,8 @@ h1.title{font-family:"Playfair Display","Cormorant Garamond",serif;font-weight:4
 
 /* тепле світло з відкритої кімнати */
 .room__glow{position:absolute;inset:0;clip-path:polygon(var(--poly));
-  transform:translateZ(calc(var(--z) + var(--pop) + 1px)) translateY(calc(var(--lift) * -1)) scale(var(--s));
+  transform:translateZ(calc(var(--z) + var(--pop) + 1px)) translate(var(--openx), var(--openy)) scale(var(--s));
+  transform-origin:var(--cx) var(--cy);
   background:radial-gradient(58% 68% at 50% 45%, rgba(255,190,115,.20), rgba(200,35,42,.09) 55%, transparent 74%);
   opacity:0;transition:opacity .5s ease;mix-blend-mode:screen;pointer-events:none}
 .room.is-open .room__glow{opacity:1;animation:flicker 3.6s ease-in-out infinite}
@@ -122,8 +125,8 @@ h1.title{font-family:"Playfair Display","Cormorant Garamond",serif;font-weight:4
 /* затемнення сцени */
 .scrim{display:none}
 .manor__base{transition:opacity .9s ease .05s, filter .45s ease}
-.scene.is-busy .manor__base{filter:brightness(.6) saturate(.85)}
-.scene.is-in.is-busy .room:not(.is-open) .room__face{filter:brightness(.6) saturate(.85)
+.scene.is-busy .manor__base{filter:brightness(.5) saturate(.78)}
+.scene.is-in.is-busy .room:not(.is-open) .room__face{filter:brightness(.5) saturate(.78)
   drop-shadow(0 0 0 #5d5566) drop-shadow(0 0 0 #2b2733)
   drop-shadow(0 0 0 #17141d) drop-shadow(0 0 0 #0b0a10) drop-shadow(0 0 0 rgba(0,0,0,0))}
 
@@ -225,13 +228,14 @@ h1.title{font-family:"Playfair Display","Cormorant Garamond",serif;font-weight:4
   body .mcard{display:block}
   .tabs{display:flex}
   .scene.is-in .room.is-open .room__face{
-    transform:translateY(-14px) scale(1.035)!important;
-    filter:brightness(1.35)
+    transform:scale(1.38)!important;
+    filter:brightness(1.45)
+           drop-shadow(0 0 1px #e6c07a) drop-shadow(0 0 3px rgba(230,192,122,.5))
            drop-shadow(0 3px 0 #5d5566) drop-shadow(0 6px 0 #2b2733)
            drop-shadow(0 11px 0 #17141d) drop-shadow(0 18px 0 #0b0a10)
            drop-shadow(0 20px 26px rgba(0,0,0,.95))!important}
   .scrim{transform:none}
-  .room__glow{transform:translateY(-14px) scale(1.035)}
+  .scene.is-in .room.is-open .room__glow{transform:scale(1.38)}
   /* при заході в кімнату мітка зайва — назва вже є в панелі, а зум її роздуває */
   .scene.is-dived .pin{opacity:0}
   .wrap{padding-bottom:215px}
@@ -253,7 +257,7 @@ html.shot .hud,html.shot .hint{display:none}
     <svg viewBox="0 0 24 8.45"><path d="M9.15,1.37c-.02,1.18,1.65,2.1,1.65,2.1-1.7-.05-1.93-1.09-1.93-1.09-.38,1.09-1.54.88-1.9.63-.65-.44-.57-.92-.57-.92C4.18,3.85,0,4.16,0,4.16v.13s4.18.31,6.4,2.08c0,0-.08-.49.57-.92.36-.24,1.52-.46,1.9.63,0,0,.23-1.05,1.93-1.09,0,0-1.67.91-1.65,2.1.02,1.18.99,1.43,1.45,1.37,0,0-.34-.18-.31-.84.04-.66.74-.68.94-.68.68,0,1.23.97,1.79.93,1.22-.08.99-1.05.99-1.05,0,0-.61.26-.76-.28-.15-.57.41-1.29,1.28-1.29s1.43.61,1.27,1.17c0,0,5.85-2.12,8.19-2.12v-.13c-2.34,0-8.19-2.12-8.19-2.12.16.57-.39,1.17-1.27,1.17s-1.44-.71-1.28-1.29c.14-.54.76-.28.76-.28,0,0,.23-.98-.99-1.05-.56-.03-1.11.92-1.79.93-.2,0-.9-.02-.94-.68-.04-.66.31-.84.31-.84-.46-.06-1.43.18-1.45,1.37h0Z"/></svg>
   </p>
   <h1 class="title">Explore the Manor</h1>
-  <p class="sub" id="sub">прототип · наведи на кімнату або клацни, щоб зайти всередину</p>
+  <p class="sub" id="sub">прототип · наведи на кімнату — вона одразу виходить на передній план</p>
 
   <div class="stage" id="stage">
     <div class="scene" id="scene" data-mode="lift">
@@ -324,6 +328,16 @@ ROOMS.forEach(r=>{
   room.style.setProperty('--z',z+'px');
   room.style.setProperty('--s',s);
   room.style.setProperty('--delay',r.d+'s');
+  const box=P[r.k];
+  const cx=box.reduce((a,p)=>a+p[0],0)/box.length, cy=box.reduce((a,p)=>a+p[1],0)/box.length;
+  r.cx=cx; r.cy=cy;
+  room.style.setProperty('--cx',cx+'%');
+  room.style.setProperty('--cy',cy+'%');
+  /* при translateZ(d) картинка росте від точки перспективи → зсуваємо назад,
+     щоб кімната збільшувалась саме там, де вона є */
+  const POP=320, k=PERSP/(PERSP-POP);
+  room.style.setProperty('--openx', (-(k-1)*(cx-50)).toFixed(2)+'%');
+  room.style.setProperty('--openy', (-(k-1)*(cy-42)-1.2).toFixed(2)+'%');
   if(r.thick) room.style.setProperty('--thick',r.thick);
   room.innerHTML='<div class="room__hole"></div><div class="room__glow"></div><div class="room__face"></div>'+
                  (r.img ? '<div class="room__inside" style="background-image:url(\''+r.img+'\')"></div>' : '');
@@ -348,17 +362,19 @@ ROOMS.forEach(r=>{
   if(r.left<26) card.classList.add('card--l'); else if(r.left>74) card.classList.add('card--r');
 
   const face=room.querySelector('.room__face');
+  const enter=()=>{ clearTimeout(leaveT); setOpen(r); };
+  const leave=()=>{ clearTimeout(leaveT);
+                    leaveT=setTimeout(()=>{ if(current===r) setOpen(null); },60); };
+  /* pointerenter ловить і мишу, і перше торкання — реакція миттєва */
+  face.addEventListener('pointerenter',enter);
+  pin.addEventListener('pointerenter',enter);
+  face.addEventListener('pointerdown',enter);
+  pin.addEventListener('pointerdown',enter);
   if(!MOB){
-    const enter=()=>{ clearTimeout(leaveT); if(!dived) setOpen(r); };
-    const leave=()=>{ if(dived) return; clearTimeout(leaveT);
-                      leaveT=setTimeout(()=>{ if(current===r) setOpen(null); },110); };
-    face.addEventListener('mouseenter',enter);
-    pin.addEventListener('mouseenter',enter);
-    face.addEventListener('mouseleave',leave);
-    pin.addEventListener('mouseleave',leave);
+    face.addEventListener('pointerleave',leave);
+    pin.addEventListener('pointerleave',leave);
   }
-  face.addEventListener('click',e=>{e.preventDefault(); dive(r);});
-  pin.querySelector('.pin__dot').addEventListener('click',()=>dive(r));
+  face.addEventListener('click',e=>e.preventDefault());
 });
 
 /* ───────── стани ───────── */
@@ -370,6 +386,7 @@ function setOpen(r){
                      if(x.ring) x.ring.classList.remove('on'); });
   current=r;
   scene.classList.toggle('is-busy',!!r);
+  scene.classList.toggle('has-open',!!r);
   if(r){ els[r.k].classList.add('is-open'); if(r.pin) r.pin.classList.add('is-open');
          if(r.ring) r.ring.classList.add('on'); }
   if(r&&r.click){
@@ -384,16 +401,9 @@ function setOpen(r){
 /* «зайти в кімнату»: камера під'їжджає впритул */
 function dive(r){
   if(flat) return;
-  if(dived && current===r){ undive(); return; }
   if(exploded) collapse();
+  if(current===r){ undive(); return; }
   setOpen(r);
-  dived=true;
-  const box=P[r.k];
-  const cx=box.reduce((a,p)=>a+p[0],0)/box.length, cy=box.reduce((a,p)=>a+p[1],0)/box.length;
-  const k = isMobile()? 1.95 : 1.55;
-  scene.style.transform='scale('+k+') translate('+((50-cx)/k*1.25)+'%,'+((44-cy)/k*1.25)+'%)';
-  scene.classList.add('is-dived'); els[r.k].classList.add('is-dived');
-  backBtn.classList.add('on');
 }
 function undive(){
   dived=false; scene.style.transform=''; backBtn.classList.remove('on');
@@ -401,6 +411,13 @@ function undive(){
   ROOMS.forEach(x=>els[x.k].classList.remove('is-dived'));
   setOpen(null);
 }
+/* тап повз кімнати — закрити */
+document.addEventListener('pointerdown',e=>{
+  if(!MOB) return;
+  if(e.target.closest('.room__face')||e.target.closest('.pin')||e.target.closest('.tabs')||
+     e.target.closest('.mcard')||e.target.closest('.hud')) return;
+  setOpen(null);
+});
 backBtn.addEventListener('click',undive);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') undive(); });
 stage.addEventListener('click',e=>{ if(e.target===stage||e.target===scene||e.target===manor) undive(); });
@@ -439,7 +456,7 @@ ROOMS.filter(r=>r.click).forEach(r=>{
   b.onclick=()=>{ (dived&&current===r) ? undive() : dive(r); };
   tabs.appendChild(b);
 });
-if(MOB) sub.textContent='прототип · торкнись кімнати, щоб зайти всередину';
+if(MOB) sub.textContent='прототип · торкнись кімнати — вона одразу виходить на передній план';
 
 /* режими */
 const mLift=document.getElementById('mLift'), mDrawer=document.getElementById('mDrawer'),
