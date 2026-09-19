@@ -87,6 +87,10 @@ h1.title{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400;
 .pin.on .card{opacity:1;translate:-50% 0;pointer-events:auto}
 .card--l{left:0;translate:-8px 12px}   .pin.on .card--l{translate:-8px 0}
 .card--r{left:auto;right:0;translate:8px 12px} .pin.on .card--r{translate:8px 0}
+.card--up{top:auto;bottom:calc(100% + 14px);translate:-50% -12px}
+.pin.on .card--up{translate:-50% 0}
+.card--up.card--l{translate:-8px -12px}  .pin.on .card--up.card--l{translate:-8px 0}
+.card--up.card--r{translate:8px -12px}   .pin.on .card--up.card--r{translate:8px 0}
 .card img,.card picture,.mcard img,.mcard picture{width:100%;height:auto;display:block}
 .card__num{font-family:"Cormorant Garamond",Georgia,serif;color:var(--gold);letter-spacing:.3em;
   font-size:13px;margin:12px 0 4px}
@@ -107,7 +111,10 @@ h1.title{font-family:"Cormorant Garamond",Georgia,serif;font-weight:400;
   border:1px solid rgba(201,168,106,.34);padding:12px 12px 16px;opacity:0;transition:opacity .3s;
   pointer-events:none}
 .mcard.on{opacity:1;pointer-events:auto}
-.tabs{display:none;gap:8px;justify-content:center;flex-wrap:wrap;margin:16px auto 0}
+.tabs{display:none;gap:8px;margin:16px auto 0;overflow-x:auto;padding-bottom:4px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none}
 .tabs button{font:inherit;font-size:12px;color:#d6ccc2;background:rgba(16,14,20,.9);
   border:1px solid rgba(201,168,106,.3);padding:10px 14px;cursor:pointer}
 .tabs button.on{background:var(--blood);border-color:var(--blood-lt);color:#fff}
@@ -189,16 +196,28 @@ html.shot .hud,html.shot .hint{display:none}
 const P = {
   grand_hall:[[38.5,14.6],[59.3,14.6],[59.3,17.6],[62.8,19.6],[62.8,47.6],[35.3,47.6],[35.3,19.6],[38.5,17.6]],
   costume:   [[9.6,28.2],[35.3,26.8],[35.3,47.6],[5.8,47.6]],
-  curiosity: [[62.8,26.8],[74.0,26.8],[74.4,24.1],[84.2,24.1],[84.6,26.8],[93.9,26.8],[94.6,47.6],[62.8,47.6]]
+  curiosity: [[62.8,26.8],[74.0,26.8],[74.4,24.1],[84.2,24.1],[84.6,26.8],[93.9,26.8],[94.6,47.6],[62.8,47.6]],
+  apothecary:[[5.8,47.6],[28.5,47.6],[28.5,63.5],[5.0,63.5]],
+  library:   [[28.5,47.6],[46.5,47.6],[46.5,63.5],[28.5,63.5]],
+  drawing:   [[54.5,47.6],[78.0,47.6],[78.0,63.5],[54.5,63.5]],
+  faces:     [[5.0,63.5],[34.5,63.5],[34.5,86.0],[4.5,86.0]],
+  vault:     [[34.5,63.5],[63.0,63.5],[63.0,86.0],[34.5,86.0]],
+  parlor:    [[63.0,63.5],[95.0,63.5],[95.0,86.0],[63.0,86.0]],
+  dungeon:   [[4.5,86.0],[95.0,86.0],[95.0,96.5],[4.5,96.5]]
 };
 const ROOMS = [
-  {k:'costume',   n:'02', title:'The Costume Wing',     text:'Distinctive costumes',
-   img:'assets/The_Costume_Wing_Room', href:'#', left:11.6, bottom:52.2},
-  {k:'grand_hall',n:'01', title:'The Grand Hall',       text:'Newest arrivals and seasonal highlights',
-   img:'assets/The_Grand_Hall_Room', href:'#', left:39.7, bottom:53.1},
-  {k:'curiosity', n:'03', title:'The Curiosity Cabinet',text:'Rare collectibles and unusual finds',
-   img:'assets/The_Curiosity_Cabinet_Room', href:'#', left:68.2, bottom:52.2}
+  {k:'grand_hall',n:'01',title:'The Grand Hall',       text:'Newest arrivals and seasonal highlights', left:39.7,bottom:53.1,href:'/collections'},
+  {k:'costume',   n:'02',title:'The Costume Wing',     text:'Distinctive costumes',                    left:11.6,bottom:52.2,href:'/collections'},
+  {k:'curiosity', n:'03',title:'The Curiosity Cabinet',text:'Rare collectibles and unusual finds',      left:68.2,bottom:52.2,href:'/collections'},
+  {k:'apothecary',n:'04',title:'The Apothecary',       text:'FX makeup and special effects',            left:5.0, bottom:34.5,href:'/collections'},
+  {k:'library',   n:'05',title:'The Library',          text:'Guides and inspiration',                   left:28.0,bottom:34.5,href:'/collections'},
+  {k:'drawing',   n:'06',title:'The Drawing Room',     text:'Atmospheric décor',                        left:56.0,bottom:34.5,href:'/collections'},
+  {k:'faces',     n:'07',title:'Hall of Faces',        text:'Masks for every identity you dare',        left:13.0,bottom:16.8,href:'/collections'},
+  {k:'vault',     n:'08',title:'The vault',            text:'Fine jewelry & precious artifacts',        left:39.5,bottom:17.8,href:'/collections'},
+  {k:'parlor',    n:'09',title:'The Parlor',           text:'Games, puzzles & curiosities for play',     left:67.7,bottom:16.8,href:'/collections'},
+  {k:'dungeon',   n:'10',title:'The Dungeon',          text:'Special offers lurk in the shadows',       left:39.6,bottom:3.8, href:'/collections/sale'}
 ];
+ROOMS.forEach(r=>r.img='assets/room-'+r.k);
 
 const stage=document.getElementById('stage'), manor=document.getElementById('manor'),
       room=document.getElementById('room'),
@@ -236,15 +255,14 @@ ROOMS.forEach(r=>{
 
   const pin=document.createElement('div');
   pin.className='pin'; pin.style.left=r.left+'%'; pin.style.bottom=r.bottom+'%';
-  pin.innerHTML='<div class="card">'+pic(r.img)+
-    '<div class="card__num">'+r.n+'</div><h3>'+r.title+'</h3><p>'+r.text+'</p>'+
-    '<a href="'+r.href+'">visit '+r.title+'</a></div>'+
+  pin.innerHTML='<div class="card"></div>'+
     '<div class="pin__dot"><i></i></div><div class="pin__label">'+r.title+'</div>'+
     '<div class="pin__note">'+r.text+'</div>';
   manor.appendChild(pin);
   r.pin=pin;
-  const card=pin.querySelector('.card');
-  if(r.left<26) card.classList.add('card--l'); else if(r.left>74) card.classList.add('card--r');
+  r.card=pin.querySelector('.card');
+  if(r.left<26) r.card.classList.add('card--l'); else if(r.left>74) r.card.classList.add('card--r');
+  if(r.bottom<28) r.card.classList.add('card--up');   /* нижні ряди — картка вгору, щоб не вилізти */
 
   const b=document.createElement('button'); b.textContent=r.title;
   b.onclick=()=>{ current===r ? close_(r,true) : open_(r); };
@@ -265,6 +283,12 @@ function open_(r){
   st.setProperty('--bgs',g.bgs); st.setProperty('--bgp',g.bgp);
   stage.classList.add('has-open');
   ROOMS.forEach(x=>{ x.pin.classList.toggle('on', x===r); x.tab.classList.toggle('on', x===r); });
+  if(!r.filled){
+    const body='<div class="card__num">'+r.n+'</div><h3>'+r.title+'</h3><p>'+r.text+'</p>'+
+               '<a href="'+r.href+'">visit '+r.title+'</a>';
+    r.card.innerHTML = pic(r.img)+body;
+    r.filled=true;
+  }
   mcard.innerHTML = pic(r.img)+'<h3>'+r.title+'</h3><p>'+r.text+'</p><a href="'+r.href+'">visit '+r.title+'</a>';
   mcard.classList.add('on');
   hint.style.opacity=0;
