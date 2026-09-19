@@ -6,7 +6,11 @@
 <title>Explore the Manor — 3D prototype</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Playfair+Display:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="assets/manor-1800.avif" type="image/avif" media="(min-width:990px)" fetchpriority="high">
+<link rel="preload" as="image" href="assets/manor-900.avif" type="image/avif" media="(max-width:989px)" fetchpriority="high">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Playfair+Display:wght@400&display=swap"
+      onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Playfair+Display:wght@400&display=swap"></noscript>
 <style>
 :root{
   --bg:#07070c;
@@ -22,7 +26,7 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
 body{overflow-x:hidden}
 
 .wrap{max-width:1560px;margin:0 auto;padding:56px 16px 90px}
@@ -46,25 +50,18 @@ h1.title{font-family:"Playfair Display","Cormorant Garamond",serif;font-weight:4
 
 .room{position:absolute;inset:0;transform-style:preserve-3d;pointer-events:none}
 
-/* «котлован»: те саме місце, але майже чорне — щоб під піднятим блоком не було його копії */
-.room__hole{position:absolute;inset:0;background-image:url("assets/manor.jpg");background-size:100% 100%;
-  clip-path:polygon(var(--poly));transform:translateZ(var(--z)) scale(var(--s));
-  transform-origin:var(--cx) var(--cy);
-  filter:brightness(.26) saturate(.45) blur(1px);
-  opacity:0;transition:opacity .45s ease;pointer-events:none}
-.room.is-open .room__hole{opacity:1}
 
 /* сам блок кімнати */
-.room__face{position:absolute;inset:0;background-image:url("assets/manor.jpg");background-size:100% 100%;
+.room__face{position:absolute;inset:0;
+  background-image:url("assets/manor-1800.webp");
+  background-image:image-set(url("assets/manor-1800.avif") type("image/avif"),
+                             url("assets/manor-1800.webp") type("image/webp"));
+  background-size:100% 100%;
   clip-path:polygon(var(--poly));
   transform:translateZ(calc(var(--z) + 420px)) translateY(-70px) scale(var(--s));
-  transform-origin:var(--cx) var(--cy);opacity:0;
-  filter:brightness(1)
-         drop-shadow(0 0 0 #5d5566) drop-shadow(0 0 0 #2b2733)
-         drop-shadow(0 0 0 #17141d) drop-shadow(0 0 0 #0b0a10)
-         drop-shadow(0 0 0 rgba(0,0,0,0));
+  transform-origin:var(--cx) var(--cy);opacity:0;filter:none;
   transition:transform .38s cubic-bezier(.22,.9,.28,1), filter .3s ease, opacity .5s ease;
-  will-change:transform,filter;pointer-events:auto}
+  pointer-events:auto}
 .room--clickable .room__face{cursor:url("assets/cursor-hand.png") 16 8, pointer}
 
 /* поява при скролі */
@@ -92,26 +89,7 @@ h1.title{font-family:"Playfair Display","Cormorant Garamond",serif;font-weight:4
          drop-shadow(0 calc(18px * var(--thick)) 0 #0b0a10)
          drop-shadow(-14px 30px 44px rgba(0,0,0,.95))}
 
-/* фото інтер'єру, що проступає при заході в кімнату */
-.room__inside{position:absolute;inset:0;clip-path:polygon(var(--poly));
-  background-size:cover;background-position:center;
-  transform:translateZ(calc(var(--z) + var(--pop) + 2px)) translateY(calc(var(--lift) * -1)) scale(var(--s));
-  opacity:0;transition:opacity .7s ease;pointer-events:none}
-.room.is-dived .room__inside{opacity:0}
-.room.is-dived .room__face{filter:brightness(1.26) saturate(1.08)
-  drop-shadow(0 2px 0 #6a6274) drop-shadow(0 4px 0 #322d3a)
-  drop-shadow(0 8px 0 #1a1720) drop-shadow(0 14px 0 #0b0a10) drop-shadow(0 22px 30px rgba(0,0,0,.92))}
-/* глибше затемнення й розмиття решти, коли ми «всередині» */
-.scene.is-dived .manor__base{filter:brightness(.34) saturate(.6) blur(2.5px)}
-.scene.is-dived.is-in .room:not(.is-open) .room__face{filter:brightness(.34) saturate(.6) blur(2.5px)
-  drop-shadow(0 0 0 #6a6274) drop-shadow(0 0 0 #322d3a)
-  drop-shadow(0 0 0 #1a1720) drop-shadow(0 0 0 #0b0a10) drop-shadow(0 0 0 rgba(0,0,0,0))}
 
-/* золотий контур підсвіченої кімнати */
-.rings{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:35;overflow:visible}
-.rings polygon{fill:none;stroke:#e6c07a;stroke-width:1.5;vector-effect:non-scaling-stroke;
-  opacity:0;transition:opacity .4s ease;filter:drop-shadow(0 0 6px rgba(230,192,122,.7))}
-.rings polygon.on{opacity:0}
 
 /* тепле світло з відкритої кімнати */
 .room__glow{position:absolute;inset:0;clip-path:polygon(var(--poly));
@@ -156,7 +134,7 @@ h1.title{font-family:"Playfair Display","Cormorant Garamond",serif;font-weight:4
 .pin.is-open .card{opacity:1;translate:-50% 0;pointer-events:auto}
 .card--l{left:0;translate:-8px 14px}   .pin.is-open .card--l{translate:-8px 0}
 .card--r{left:auto;right:0;translate:8px 14px} .pin.is-open .card--r{translate:8px 0}
-.card img{width:100%;display:block}
+.card img,.card picture{width:100%;height:auto;display:block}
 .card__num{font-family:"Cormorant Garamond",serif;color:var(--gold);letter-spacing:.3em;font-size:13px;margin:12px 0 4px}
 .card h3{font-family:"Cormorant Garamond",serif;font-style:italic;font-weight:600;font-size:26px;margin:0 0 6px;color:#f7f1e8}
 .card p{margin:0 0 14px;font-size:13.5px;line-height:1.5;color:#b9b0a6}
@@ -190,7 +168,7 @@ h1.title{font-family:"Playfair Display","Cormorant Garamond",serif;font-weight:4
   border:1px solid rgba(201,168,106,.34);padding:12px 12px 16px;opacity:0;transform:translateY(10px);
   transition:.4s;pointer-events:none}
 .mcard.on{opacity:1;transform:none;pointer-events:auto}
-.mcard img{width:100%;display:block}
+.mcard img,.mcard picture{width:100%;height:auto;display:block}
 .mcard h3{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:24px;margin:10px 0 4px;color:#f7f1e8}
 .mcard p{margin:0 0 12px;font-size:13.5px;color:#b9b0a6}
 .tabs{display:none;gap:8px;justify-content:center;flex-wrap:wrap;margin:16px auto 0}
@@ -211,13 +189,16 @@ h1.title{font-family:"Playfair Display","Cormorant Garamond",serif;font-weight:4
 
 /* «як зараз» — увесь 3D вимкнено */
 .scene.flat .room__face{transform:translateZ(0) scale(1)!important;filter:none!important;opacity:1!important}
-.scene.flat .room__hole,.scene.flat .room__glow,.scene.flat .scrim{opacity:0!important}
+.scene.flat .room__glow,.scene.flat .scrim{opacity:0!important}
 .scene.flat,.scene.flat .manor{transform:none!important}
 .scene.flat .pin{opacity:1!important}
 .scene.flat .manor__base{opacity:1!important}
 
 /* ───────── телефон: плоский режим + «зайти в кімнату» ───────── */
 @media (max-width:989px){
+  .room__face{background-image:url("assets/manor-900.webp");
+    background-image:image-set(url("assets/manor-900.avif") type("image/avif"),
+                               url("assets/manor-900.webp") type("image/webp"))}
   .wrap{padding:34px 12px 150px}
   .stage{perspective:none;padding:20px 0 10px;margin:-20px 0 -10px}
   .pin__note{display:none}
@@ -262,10 +243,16 @@ html.shot .hud,html.shot .hint{display:none}
   <div class="stage" id="stage">
     <div class="scene" id="scene" data-mode="lift">
       <div class="manor" id="manor">
-        <img class="manor__base" src="assets/manor.jpg" alt="Fright Delights manor" width="2200" height="1786">
+        <picture>
+          <source type="image/avif" media="(max-width:989px)" srcset="assets/manor-900.avif">
+          <source type="image/webp" media="(max-width:989px)" srcset="assets/manor-900.webp">
+          <source type="image/avif" srcset="assets/manor-1800.avif">
+          <source type="image/webp" srcset="assets/manor-1800.webp">
+          <img class="manor__base" src="assets/manor-1800.webp" alt="Fright Delights manor"
+               width="1800" height="1461" fetchpriority="high" decoding="async">
+        </picture>
         <div class="fog"></div>
         <div class="dust" id="dust"></div>
-        <svg class="rings" id="rings" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
         <div class="scrim" id="scrim"></div>
       </div>
     </div>
@@ -314,7 +301,7 @@ const manor=document.getElementById('manor'), scene=document.getElementById('sce
       stage=document.getElementById('stage'), hint=document.getElementById('hint'),
       backBtn=document.getElementById('back'), mcard=document.getElementById('mcard'),
       tabs=document.getElementById('tabs'), sub=document.getElementById('sub'),
-      scrim=document.getElementById('scrim'), rings=document.getElementById('rings');
+      scrim=document.getElementById('scrim');
 const els={};
 const MOB = isMobile();
 
@@ -339,19 +326,19 @@ ROOMS.forEach(r=>{
   room.style.setProperty('--openx', (-(k-1)*(cx-50)).toFixed(2)+'%');
   room.style.setProperty('--openy', (-(k-1)*(cy-42)-1.2).toFixed(2)+'%');
   if(r.thick) room.style.setProperty('--thick',r.thick);
-  room.innerHTML='<div class="room__hole"></div><div class="room__glow"></div><div class="room__face"></div>'+
-                 (r.img ? '<div class="room__inside" style="background-image:url(\''+r.img+'\')"></div>' : '');
-  manor.insertBefore(room, rings);
+  room.innerHTML='<div class="room__glow"></div><div class="room__face"></div>';
+  manor.insertBefore(room, scrim);
   els[r.k]=room;
   if(!r.click) return;
 
-  const ring=document.createElementNS('http://www.w3.org/2000/svg','polygon');
-  ring.setAttribute('points', P[r.k].map(p=>p[0]+','+p[1]).join(' '));
-  rings.appendChild(ring); r.ring=ring;
 
   const pin=document.createElement('div');
   pin.className='pin'; pin.style.left=r.left+'%'; pin.style.bottom=r.bottom+'%';
-  pin.innerHTML='<div class="card"><img src="'+r.img+'" alt="">'+
+  pin.innerHTML='<div class="card"><picture>'+
+    '<source type="image/avif" srcset="'+r.img.replace(/\.jpg$/,'.avif')+'">'+
+    '<source type="image/webp" srcset="'+r.img.replace(/\.jpg$/,'.webp')+'">'+
+    '<img src="'+r.img.replace(/\.jpg$/,'.webp')+'" alt="" loading="lazy" decoding="async" width="560" height="305">'+
+    '</picture>'+
     '<div class="card__num">'+r.n+'</div><h3>'+r.title+'</h3><p>'+r.text+'</p>'+
     '<a class="btn" href="'+r.href+'">visit '+r.title+'</a></div>'+
     '<div class="pin__dot"><i></i></div><div class="pin__label">'+r.title+'</div>'+
@@ -382,15 +369,17 @@ let current=null, dived=false, leaveT=null, exploded=false, flat=false;
 
 function setOpen(r){
   if(flat||exploded) return;
-  ROOMS.forEach(x=>{ els[x.k].classList.remove('is-open'); if(x.pin) x.pin.classList.remove('is-open');
-                     if(x.ring) x.ring.classList.remove('on'); });
+  ROOMS.forEach(x=>{ els[x.k].classList.remove('is-open'); if(x.pin) x.pin.classList.remove('is-open'); });
   current=r;
   scene.classList.toggle('is-busy',!!r);
   scene.classList.toggle('has-open',!!r);
-  if(r){ els[r.k].classList.add('is-open'); if(r.pin) r.pin.classList.add('is-open');
-         if(r.ring) r.ring.classList.add('on'); }
+  if(r){ els[r.k].classList.add('is-open'); if(r.pin) r.pin.classList.add('is-open'); }
   if(r&&r.click){
-    mcard.innerHTML='<img src="'+r.img+'" alt=""><h3>'+r.title+'</h3><p>'+r.text+'</p>'+
+    mcard.innerHTML='<picture>'+
+      '<source type="image/avif" srcset="'+r.img.replace(/\.jpg$/,'.avif')+'">'+
+      '<source type="image/webp" srcset="'+r.img.replace(/\.jpg$/,'.webp')+'">'+
+      '<img src="'+r.img.replace(/\.jpg$/,'.webp')+'" alt="" loading="lazy" decoding="async" width="560" height="305">'+
+      '</picture><h3>'+r.title+'</h3><p>'+r.text+'</p>'+
                     '<a href="'+r.href+'">visit '+r.title+'</a>';
     mcard.classList.add('on');
   } else mcard.classList.remove('on');
